@@ -1,6 +1,5 @@
 import csv
 
-
 class BoolIter:
     def __init__(self, bits, start=0, end=0):
         assert bits >= 0
@@ -274,7 +273,7 @@ class WeightedSum:
     def is_covered(self, n):
         return n in self.rep
 
-    def max_continous_coverage(self, n):
+    def max_continous_coverage(self):
         return self.max_cont
 
     def max_number(self, n):
