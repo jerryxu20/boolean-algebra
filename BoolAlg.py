@@ -1,5 +1,6 @@
 import csv
 
+
 class BoolIter:
     def __init__(self, bits, start=0, end=0):
         assert bits >= 0
@@ -71,7 +72,10 @@ class BoolBin:
         rep = kwargs.get('rep', 'boolean')
 
         with open(filepath, 'w', encoding="utf-8", newline='') as f:
-            writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            writer = csv.writer(f,
+                                delimiter=',',
+                                quotechar='"',
+                                quoting=csv.QUOTE_MINIMAL)
             function_names = [function.__name__ for function in args]
             header = variables + function_names
 
@@ -87,14 +91,14 @@ class BoolBin:
                     row.append(rep_table[rep][bit])
 
                 trues = 0
-                for function in args:
+                for f in args:
                     res = f(*combo)
                     trues += int(res)
                     row.append(rep_table[rep][res])
 
                 if assert_equal:
-                    if trues == 0 or trues == len(args):
-                        row.append(rep_table[rep][trues == 0 or trues == len(args)])
+                    bit = trues == 0 or trues == len(args)
+                    row.append(rep_table[rep][bit])
                 writer.writerow(row)
 
     def truth_table(self, n, *args, **kwargs):
@@ -141,14 +145,18 @@ class BoolBin:
         for combo in it:
             i = 0
             for bit in combo:
-                self.fprint(rep_table[rep][bit], max(len(variables[i]), bool_len), tight=True)
+                text = rep_table[rep][bit]
+                sz = max(len(variables[i]), bool_len)
+                self.fprint(text, sz, tight=True)
                 i += 1
 
             trues = 0
             for function in args:
                 res = function(*combo)
                 trues += int(res)
-                self.fprint(rep_table[rep][res], max(col_len, len(function.__name__)), tight=False)
+                text = rep_table[rep][res]
+                sz = max(col_len, len(function.__name__))
+                self.fprint(text, sz, tight=False)
 
             if not assert_equal:
                 print("")
@@ -237,14 +245,38 @@ class BoolBin:
         print(f"{f.__name__}:")
         self.kmap(n, minterms, "".join(l2), "".join(l1), len(l2), len(l1))
 
+    def terms(self, n, f, type):
+        if type.lower() == 'max':
+            target = False
+
+        if type.lower() == 'min':
+            target = True
+
+        ans = []
+        for i, args in enumerate(BoolIter(n)):
+            if f(*args) == target:
+                ans.append(i)
+        return ans
+
 
 class WeightedSum:
     def __init__(self, weights):
         self.weights = weights
         self.sorted_weights = sorted(weights)
         self.max = sum(self.weights)
-        self.rep, self.lookup = self.build_cover()
+        self.__rep, self.lookup = self.build_cover()
         self.max_cont = self.patch()
+        self.__binrep = self.bin_keys(self.__rep)
+
+    def bin_keys(self, dict):
+        ret = dict
+        for key, value in dict.items():
+            ret[key] = list(map(self.to_bin, value))
+        return ret
+
+    def to_bin(self, a):
+        b = '0' * len(self.weights) + bin(a)[2:]
+        return b[-len(self.weights):]
 
     def build_cover(self):
         rep = {}
@@ -271,7 +303,7 @@ class WeightedSum:
         return mx
 
     def is_covered(self, n):
-        return n in self.rep
+        return n in self.__rep
 
     def max_continous_coverage(self):
         return self.max_cont
@@ -295,7 +327,11 @@ class WeightedSum:
         return self.calc_sum(n)
 
     def representation(self, n):
-        return self.rep.get(n, None)
+        return self.__rep.get(n, None)
+
+    @property
+    def rep(self):
+        return self.__binrep
 
 
 class MTerm:
@@ -329,7 +365,7 @@ class MTerm:
                 new_terms.append(i)
         return new_terms
 
-    def expand_min(self, terms, f="f", max=False):
+    def expand_min(self, terms, max=False, f="f"):
         if max:
             terms = self.list_complement(terms)
 
@@ -353,7 +389,7 @@ class MTerm:
         print(result)
         print(ans)
 
-    def expand_max(self, terms, f="f", min=False):
+    def expand_max(self, terms, min=False, f="f"):
         if min:
             terms = self.list_complement(terms)
 
